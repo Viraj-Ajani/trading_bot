@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Futures Trading Bot</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: 500px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .timeframe-btn {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .timeframe-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .price-indicator {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .current-price {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .price-change {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .price-change.positive {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .price-change.negative {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .balance-card .update-indicator {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+        }
+
+        .balance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .balance-item {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .balance-item.updating {
+            animation: balanceUpdate 0.5s ease;
+        }
+
+        @keyframes balanceUpdate {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+                background: rgba(255,255,255,0.3);
+            }
+        }
+
+        .balance-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .balance-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        .order-types {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .order-type-btn {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .order-type-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .order-type-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .side-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .side-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .side-btn.buy {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .side-btn.buy.active {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .side-btn.sell {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .side-btn.sell.active {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .info-box {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box small {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .positions-table, .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .positions-table th, .trades-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .positions-table td, .trades-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .profit-positive {
+            color: #2e7d32;
+            font-weight: 600;
+        }
+
+        .profit-negative {
+            color: #c62828;
+            font-weight: 600;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .login-screen {
+            max-width: 500px;
+            margin: 100px auto;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .refresh-status {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .order-types {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Binance Futures Trading Bot</h1>
+            <p>Advanced Trading Interface with Real-time Charts & Analysis</p>
+        </div>
+
+        <!-- Login Screen -->
+        <div id="loginScreen" class="login-screen">
+            <div class="card">
+                <h2>Connect to Binance Testnet</h2>
+                <div id="loginAlert" class="alert"></div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" id="apiKey" placeholder="Enter your Binance Testnet API Key">
+                </div>
+                <div class="form-group">
+                    <label>API Secret</label>
+                    <input type="password" id="apiSecret" placeholder="Enter your Binance Testnet API Secret">
+                </div>
+                <button class="btn btn-primary" onclick="connect()" style="width: 100%;">
+                    Connect to Testnet
+                </button>
+                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                    <small><strong>Note:</strong> Get your testnet credentials at <a href="https://testnet.binancefuture.com" target="_blank">testnet.binancefuture.com</a></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Trading Interface -->
+        <div id="tradingInterface" class="hidden">
+            <!-- Balance Section -->
+            <div class="balance-card">
+                <div class="update-indicator" title="Live updates active"></div>
+                <h3>💰 Account Balance</h3>
+                <div class="balance-grid">
+                    <div class="balance-item" id="totalBalanceItem">
+                        <div class="balance-label">Total Balance</div>
+                        <div class="balance-value" id="totalBalance">0</div>
+                    </div>
+                    <div class="balance-item" id="availableBalanceItem">
+                        <div class="balance-label">Available</div>
+                        <div class="balance-value" id="availableBalance">0</div>
+                    </div>
+                    <div class="balance-item" id="unrealizedProfitItem">
+                        <div class="balance-label">Unrealized PnL</div>
+                        <div class="balance-value" id="unrealizedProfit">0</div>
+                    </div>
+                </div>
+                <div class="refresh-status" id="refreshStatus">Live updates: Every 2 seconds</div>
+            </div>
+
+            <div class="main-grid">
+                <!-- Order Form -->
+                <div class="card">
+                    <h2>📊 Place Order</h2>
+                    <div id="orderAlert" class="alert"></div>
+
+                    <!-- Order Type Selection -->
+                    <div class="order-types">
+                        <div class="order-type-btn active" onclick="selectOrderType('MARKET')">
+                            Market
+                        </div>
+                        <div class="order-type-btn" onclick="selectOrderType('LIMIT')">
+                            Limit
+                        </div>
+                        <div class="order-type-btn" onclick="selectOrderType('STOP_LIMIT')">
+                            Stop-Limit
+                        </div>
+                    </div>
+
+                    <!-- Buy/Sell Buttons -->
+                    <div class="side-buttons">
+                        <button class="side-btn buy active" onclick="selectSide('BUY')">
+                            BUY / LONG
+                        </button>
+                        <button class="side-btn sell" onclick="selectSide('SELL')">
+                            SELL / SHORT
+                        </button>
+                    </div>
+
+                    <!-- Symbol Input -->
+                    <div class="form-group">
+                        <label>Symbol</label>
+                        <input type="text" id="symbol" value="BTCUSDT" onchange="loadSymbolInfo()">
+                    </div>
+
+                    <!-- Symbol Info -->
+                    <div id="symbolInfo" class="info-box" style="display: none;">
+                        <small>
+                            <strong>Current Price:</strong> <span id="currentPrice">-</span><br>
+                            <strong>Min Quantity:</strong> <span id="minQty">-</span><br>
+                            <strong>Max Quantity:</strong> <span id="maxQty">-</span><br>
+                            <strong>Min Notional:</strong> <span id="minNotional">-</span> USDT
+                        </small>
+                    </div>
+
+                    <!-- Quantity Input -->
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="quantity" step="0.001" placeholder="0.001">
+                    </div>
+
+                    <!-- Price Input (for Limit orders) -->
+                    <div class="form-group hidden" id="priceGroup">
+                        <label>Limit Price</label>
+                        <input type="number" id="price" step="0.01" placeholder="0.00">
+                    </div>
+
+                    <!-- Stop Price Input (for Stop-Limit orders) -->
+                    <div class="form-group hidden" id="stopPriceGroup">
+                        <label>Stop Price</label>
+                        <input type="number" id="stopPrice" step="0.01" placeholder="0.00">
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <button class="btn btn-primary" onclick="placeOrder()" style="width: 100%;">
+                        Place Order
+                    </button>
+                </div>
+
+                <!-- Price Chart -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <h2 style="margin: 0; border: none; padding: 0;">📈 Live Price Chart</h2>
+                            <div class="price-indicator" style="margin-top: 10px;">
+                                <div class="current-price" id="chartPrice">-</div>
+                                <div class="price-change" id="priceChange">-</div>
+                            </div>
+                        </div>
+                        <div class="chart-controls">
+                            <button class="timeframe-btn active" onclick="changeTimeframe('1m')">1m</button>
+                            <button class="timeframe-btn" onclick="changeTimeframe('5m')">5m</button>
+                            <button class="timeframe-btn" onclick="changeTimeframe('15m')">15m</button>
+                            <button class="timeframe-btn" onclick="changeTimeframe('1h')">1h</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Positions & Trades -->
+                <div>
+                    <!-- Open Positions -->
+                    <div class="card" style="margin-bottom: 20px;">
+                        <h2>📈 Open Positions</h2>
+                        <div id="positionsContainer">
+                            <p style="text-align: center; color: #999;">No open positions</p>
+                        </div>
+                    </div>
+
+                    <!-- Recent Trades -->
+                    <div class="card">
+                        <h2>📜 Recent Trades</h2>
+                        <div class="form-group">
+                            <input type="text" id="tradeSymbol" value="BTCUSDT" placeholder="Symbol">
+                            <button class="btn btn-primary" onclick="loadRecentTrades()" style="margin-top: 10px;">
+                                Load Trades
+                            </button>
+                        </div>
+                        <div id="tradesContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOrderType = 'MARKET';
+        let currentSide = 'BUY';
+        let symbolInfoData = null;
+        let updateInterval = null;
+        let chartUpdateInterval = null;
+        let priceChart = null;
+        let currentTimeframe = '1m';
+        let previousBalance = {
+            total: 0,
+            available: 0,
+            unrealized: 0
+        };
+        let chartData = {
+            labels: [],
+            prices: [],
+            startPrice: 0
+        };
+
+        async function connect() {
+            const apiKey = document.getElementById('apiKey').value;
+            const apiSecret = document.getElementById('apiSecret').value;
+
+            if (!apiKey || !apiSecret) {
+                showAlert('loginAlert', 'Please enter both API Key and Secret', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey, api_secret: apiSecret })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('tradingInterface').classList.remove('hidden');
+                    updateBalance(data.balance);
+                    loadSymbolInfo();
+                    loadPositions();
+                    initializeChart();
+                    startRealTimeUpdates();
+                } else {
+                    showAlert('loginAlert', data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('loginAlert', 'Connection failed: ' + error.message, 'error');
+            }
+        }
+
+        function initializeChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Price',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#667eea',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    return 'Price: $' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxTicksLimit: 8,
+                                color: '#666'
+                            }
+                        },
+                        y: {
+                            position: 'right',
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                color: '#666',
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Start updating chart
+            updateChart();
+            chartUpdateInterval = setInterval(updateChart, 2000);
+        }
+
+        async function updateChart() {
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            
+            try {
+                const response = await fetch(`/api/symbol-info/${symbol}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const price = data.current_price;
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString();
+
+                    // Initialize start price if first data point
+                    if (chartData.prices.length === 0) {
+                        chartData.startPrice = price;
+                    }
+
+                    // Add new data point
+                    chartData.labels.push(timeStr);
+                    chartData.prices.push(price);
+
+                    // Keep only last 50 data points
+                    if (chartData.labels.length > 50) {
+                        chartData.labels.shift();
+                        chartData.prices.shift();
+                    }
+
+                    // Update chart
+                    priceChart.data.labels = chartData.labels;
+                    priceChart.data.datasets[0].data = chartData.prices;
+                    
+                    // Change line color based on trend
+                    const isUp = price >= chartData.startPrice;
+                    priceChart.data.datasets[0].borderColor = isUp ? '#11998e' : '#eb3349';
+                    priceChart.data.datasets[0].backgroundColor = isUp ? 'rgba(17, 153, 142, 0.1)' : 'rgba(235, 51, 73, 0.1)';
+                    
+                    priceChart.update('none');
+
+                    // Update price display
+                    document.getElementById('chartPrice').textContent = '$' + price.toFixed(2);
+                    
+                    // Calculate price change
+                    const priceChange = price - chartData.startPrice;
+                    const priceChangePercent = ((priceChange / chartData.startPrice) * 100).toFixed(2);
+                    const priceChangeElement = document.getElementById('priceChange');
+                    
+                    priceChangeElement.textContent = (priceChange >= 0 ? '+' : '') + priceChangePercent + '%';
+                    priceChangeElement.className = 'price-change ' + (priceChange >= 0 ? 'positive' : 'negative');
+                }
+            } catch (error) {
+                console.error('Failed to update chart:', error);
+            }
+        }
+
+        function changeTimeframe(timeframe) {
+            currentTimeframe = timeframe;
+            
+            // Update button states
+            document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Reset chart data
+            chartData = {
+                labels: [],
+                prices: [],
+                startPrice: 0
+            };
+
+            // Clear and restart chart updates
+            clearInterval(chartUpdateInterval);
+            updateChart();
+            
+            // Different update intervals based on timeframe
+            const intervals = {
+                '1m': 2000,
+                '5m': 5000,
+                '15m': 10000,
+                '1h': 30000
+            };
+            
+            chartUpdateInterval = setInterval(updateChart, intervals[timeframe] || 2000);
+        }
+
+        function startRealTimeUpdates() {
+            // Clear any existing interval
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+
+            // Update every 2 seconds for real-time feel
+            updateInterval = setInterval(() => {
+                loadBalance();
+                loadPositions();
+            }, 2000);
+
+            // Also update immediately
+            loadBalance();
+            loadPositions();
+        }
+
+        function selectOrderType(type) {
+            currentOrderType = type;
+            document.querySelectorAll('.order-type-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Show/hide price inputs based on order type
+            if (type === 'MARKET') {
+                document.getElementById('priceGroup').classList.add('hidden');
+                document.getElementById('stopPriceGroup').classList.add('hidden');
+            } else if (type === 'LIMIT') {
+                document.getElementById('priceGroup').classList.remove('hidden');
+                document.getElementById('stopPriceGroup').classList.add('hidden');
+            } else if (type === 'STOP_LIMIT') {
+                document.getElementById('priceGroup').classList.remove('hidden');
+                document.getElementById('stopPriceGroup').classList.remove('hidden');
+            }
+        }
+
+        function selectSide(side) {
+            currentSide = side;
+            document.querySelectorAll('.side-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        async function loadSymbolInfo() {
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            
+            // Reset chart when symbol changes
+            chartData = {
+                labels: [],
+                prices: [],
+                startPrice: 0
+            };
+            
+            try {
+                const response = await fetch(`/api/symbol-info/${symbol}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    symbolInfoData = data.info;
+                    document.getElementById('currentPrice').textContent = data.current_price.toFixed(2);
+                    document.getElementById('minQty').textContent = data.info.min_qty;
+                    document.getElementById('maxQty').textContent = data.info.max_qty;
+                    document.getElementById('minNotional').textContent = data.info.min_notional || 'N/A';
+                    document.getElementById('symbolInfo').style.display = 'block';
+                } else {
+                    showAlert('orderAlert', data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('orderAlert', 'Failed to load symbol info: ' + error.message, 'error');
+            }
+        }
+
+        async function placeOrder() {
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            const price = parseFloat(document.getElementById('price').value);
+            const stopPrice = parseFloat(document.getElementById('stopPrice').value);
+
+            if (!quantity) {
+                showAlert('orderAlert', 'Please enter quantity', 'error');
+                return;
+            }
+
+            const orderData = {
+                order_type: currentOrderType,
+                symbol: symbol,
+                side: currentSide,
+                quantity: quantity
+            };
+
+            if (currentOrderType === 'LIMIT' || currentOrderType === 'STOP_LIMIT') {
+                if (!price) {
+                    showAlert('orderAlert', 'Please enter limit price', 'error');
+                    return;
+                }
+                orderData.price = price;
+            }
+
+            if (currentOrderType === 'STOP_LIMIT') {
+            if (!stopPrice) {
+                showAlert('orderAlert', 'Please enter stop price', 'error');
+                return;
+            }
+            orderData.stop_price = stopPrice;
+        }
+
+        try {
+            const response = await fetch('/api/place-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert('orderAlert', `Order placed successfully! Order ID: ${data.order.orderId}`, 'success');
+                // Immediate update after order
+                loadBalance();
+                loadPositions();
+            } else {
+                showAlert('orderAlert', data.error, 'error');
+            }
+        } catch (error) {
+            showAlert('orderAlert', 'Failed to place order: ' + error.message, 'error');
+        }
+    }
+
+    async function loadBalance() {
+        try {
+            const response = await fetch('/api/balance');
+            const data = await response.json();
+
+            if (data.success) {
+                updateBalance(data.balance);
+            }
+        } catch (error) {
+            console.error('Failed to load balance:', error);
+        }
+    }
+
+    function updateBalance(balance) {
+        const total = balance.total_wallet_balance;
+        const available = balance.available_balance;
+        const unrealized = balance.total_unrealized_profit;
+
+        // Animate if values changed
+        if (total !== previousBalance.total) {
+            document.getElementById('totalBalanceItem').classList.add('updating');
+            setTimeout(() => {
+                document.getElementById('totalBalanceItem').classList.remove('updating');
+            }, 500);
+        }
+
+        if (available !== previousBalance.available) {
+            document.getElementById('availableBalanceItem').classList.add('updating');
+            setTimeout(() => {
+                document.getElementById('availableBalanceItem').classList.remove('updating');
+            }, 500);
+        }
+
+        if (unrealized !== previousBalance.unrealized) {
+            document.getElementById('unrealizedProfitItem').classList.add('updating');
+            setTimeout(() => {
+                document.getElementById('unrealizedProfitItem').classList.remove('updating');
+            }, 500);
+        }
+
+        // Update display
+        document.getElementById('totalBalance').textContent = total.toFixed(2) + ' USDT';
+        document.getElementById('availableBalance').textContent = available.toFixed(2) + ' USDT';
+        
+        const pnlElement = document.getElementById('unrealizedProfit');
+        pnlElement.textContent = unrealized.toFixed(2) + ' USDT';
+        pnlElement.className = 'balance-value ' + (unrealized >= 0 ? 'profit-positive' : 'profit-negative');
+
+        // Update previous values
+        previousBalance = {
+            total: total,
+            available: available,
+            unrealized: unrealized
+        };
+
+        // Update status
+        const now = new Date();
+        document.getElementById('refreshStatus').textContent = `Last update: ${now.toLocaleTimeString()}`;
+    }
+
+    async function loadPositions() {
+        try {
+            const response = await fetch('/api/positions');
+            const data = await response.json();
+
+            if (data.success) {
+                const container = document.getElementById('positionsContainer');
+                
+                if (data.positions.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #999;">No open positions</p>';
+                } else {
+                    let html = '<table class="positions-table"><thead><tr><th>Symbol</th><th>Size</th><th>Entry Price</th><th>Unrealized PnL</th><th>Leverage</th></tr></thead><tbody>';
+                    
+                    data.positions.forEach(pos => {
+                        const pnlClass = pos.unrealized_profit >= 0 ? 'profit-positive' : 'profit-negative';
+                        html += `
+                            <tr>
+                                <td><strong>${pos.symbol}</strong></td>
+                                <td>${pos.position_amt}</td>
+                                <td>${pos.entry_price}</td>
+                                <td class="${pnlClass}">${pos.unrealized_profit.toFixed(2)}</td>
+                                <td>${pos.leverage}x</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load positions:', error);
+        }
+    }
+
+    async function loadRecentTrades() {
+        const symbol = document.getElementById('tradeSymbol').value.toUpperCase();
+        
+        try {
+            const response = await fetch(`/api/recent-trades/${symbol}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const container = document.getElementById('tradesContainer');
+                
+                if (data.trades.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #999;">No recent trades</p>';
+                } else {
+                    let html = '<table class="trades-table"><thead><tr><th>Time</th><th>Side</th><th>Price</th><th>Qty</th><th>Realized PnL</th></tr></thead><tbody>';
+                    
+                    data.trades.forEach(trade => {
+                        const date = new Date(trade.time);
+                        const pnlClass = parseFloat(trade.realizedPnl) >= 0 ? 'profit-positive' : 'profit-negative';
+                        html += `
+                            <tr>
+                                <td>${date.toLocaleString()}</td>
+                                <td><strong>${trade.side}</strong></td>
+                                <td>${parseFloat(trade.price).toFixed(2)}</td>
+                                <td>${trade.qty}</td>
+                                <td class="${pnlClass}">${parseFloat(trade.realizedPnl).toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load trades:', error);
+        }
+    }
+
+    function showAlert(elementId, message, type) {
+        const alert = document.getElementById(elementId);
+        alert.textContent = message;
+        alert.className = `alert ${type} show`;
+        
+        setTimeout(() => {
+            alert.classList.remove('show');
+        }, 5000);
+    }
+
+    // Clean up intervals when page is closed
+    window.addEventListener('beforeunload', () => {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+        if (chartUpdateInterval) {
+            clearInterval(chartUpdateInterval);
+        }
+    });
+</script>
+</body>
+</html>
